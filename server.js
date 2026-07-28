@@ -9,7 +9,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const productRoutes = require("./routes/productRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const cartRoutes = require("./routes/cartRoutes");
-
+const orderRoutes = require("./routes/orderRoutes");
 dotenv.config();
 
 const app = express();
@@ -23,6 +23,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/orders", orderRoutes);
+
 const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
