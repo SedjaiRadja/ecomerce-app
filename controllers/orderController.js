@@ -3,6 +3,8 @@ const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 const mongoose = require("mongoose");
 
+// client
+
 const createOrder = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -144,9 +146,100 @@ const cancelMyOrder = async (req, res) => {
   }
 };
 
+// admin
+
+const getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate("user", "name email")
+      .populate("items.product", "name image price");
+    if (orders.length === 0) {
+      return res.status(404).send("there are no order");
+    }
+    res.status(200).json({
+      message: "Orders fetched successfully",
+      orders,
+    });
+  } catch (error) {
+    return res.status(500).send("Failed to fetch orders");
+  }
+};
+
+const getOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).send("Invalid order ID");
+    }
+
+    const order = await Order.findById(orderId)
+      .populate("user", "name email")
+      .populate("items.product", "name image price");
+    if (!order) {
+      return res.status(404).send("Order not found");
+    }
+
+    return res.status(200).json({
+      message: "Order fetched successfully",
+      order,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send("Failed to fetch order");
+  }
+};
+
+const updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).send("Status is required");
+    }
+
+    const allowedStatuses = [
+      "pending",
+      "confirmed",
+      "shipped",
+      "delivered",
+      "cancelled",
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).send("Invalid status");
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).send("Invalid order ID");
+    }
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).send("Order not found");
+    }
+
+    order.status = status;
+    await order.save();
+
+    return res.status(200).json({
+      message: "Order status updated successfully",
+      order,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send("Failed to update order status");
+  }
+};
+
 module.exports = {
   createOrder,
   getMyOrders,
   getMyOrder,
   cancelMyOrder,
+  getAllOrders,
+  getOrder,
+  updateOrderStatus,
 };
