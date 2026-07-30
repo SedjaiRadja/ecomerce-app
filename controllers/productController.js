@@ -1,6 +1,6 @@
 const Product = require("../models/Product");
-// تغيير الاسم الى create
-const productController = async (req, res) => {
+
+const createProduct = async (req, res) => {
   try {
     const { name, description, price, image, category, stock } = req.body;
     const product = await Product.findOne({ name });
@@ -26,9 +26,35 @@ const productController = async (req, res) => {
 
 const getProducts = async (req, res) => {
   try {
-    const allProduct = await Product.find();
+    const { search, category, minPrice, maxPrice } = req.query;
+    let filters = {};
+
+    if (search) {
+      filters.name = {
+        $regex: search,
+        $options: "i",
+      };
+    }
+    if (category) {
+      filters.category = {
+        $regex: category,
+        $options: "i",
+      };
+    }
+    if (minPrice || maxPrice) {
+      filters.price = {};
+
+      if (minPrice) {
+        filters.price.$gte = Number(minPrice);
+      }
+
+      if (maxPrice) {
+        filters.price.$lte = Number(maxPrice);
+      }
+    }
+    const allProduct = await Product.find(filters);
     if (allProduct.length === 0) {
-      return res.status(404).send("there's no product");
+      res.status(200).json([]);
     }
     res.status(200).json(allProduct);
   } catch (error) {
@@ -76,7 +102,7 @@ const deleteProduct = async (req, res) => {
 };
 
 module.exports = {
-  productController,
+  createProduct,
   getProducts,
   getProduct,
   updateProduct,
