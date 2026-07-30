@@ -23,6 +23,9 @@ const addProductToCart = async (req, res) => {
     if (!product) {
       return res.status(404).send("product not found");
     }
+    if(quantity > product.stock) {
+      return res.status(400).send("Not enough stock available !")
+    }
     const cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
@@ -43,12 +46,17 @@ const addProductToCart = async (req, res) => {
 
     const p = cart.items.find((item) => item.product.toString() === productId);
     if (p) {
+      const newQuantity = p.quantity + quantity;
+      if(newQuantity>product.stock){
+        return res.status(400).send("Not enough stock available");
+      }
       p.quantity += quantity;
     } else {
-      cart.items.push({
-        product: productId,
-        quantity,
-      });
+        cart.items.push({
+          product: productId,
+          quantity,
+        });
+      
     }
     await cart.save();
     return res.status(200).json({
@@ -79,9 +87,11 @@ const updateCartQuantity = async (req, res) => {
     const userId = req.user.id;
     const { productId } = req.params;
     const { quantity } = req.body;
+
     if (!productId || !quantity) {
       return res.status(400).send("Product ID is required");
     }
+
     if (
       typeof quantity !== "number" ||
       !Number.isInteger(quantity) ||
@@ -89,19 +99,39 @@ const updateCartQuantity = async (req, res) => {
     ) {
       return res.status(400).send("Quantity must be a positive integer");
     }
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).send("Invalid product ID");
+    }
+
     const cart = await Cart.findOne({ user: userId });
+
     if (!cart) {
       return res.status(404).send("Cart not found");
     }
-    const product = cart.items.find(
-      (item) => item.product.toString() === productId,
+
+    const productCart = cart.items.find(
+      (item) => item.product.toString() === productId
     );
-    if (product) {
-      product.quantity = quantity;
-    } else {
+
+    if (!productCart) {
       return res.status(404).send("Product not found in cart");
     }
+
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).send("Product not found");
+    }
+
+    if (quantity > product.stock) {
+      return res.status(400).send("Not enough stock available");
+    }
+
+    productCart.quantity = quantity;
+
     await cart.save();
+
     return res.status(200).json({
       message: "Cart quantity updated successfully",
       cart,

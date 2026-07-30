@@ -1,5 +1,5 @@
 const Product = require("../models/Product");
-
+// تغيير الاسم الى create
 const productController = async (req, res) => {
   try {
     const { name, description, price, image, category, stock } = req.body;
@@ -49,7 +49,10 @@ const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const data = req.body;
-    const product = await Product.findByIdAndUpdate(id, data, { new: true });
+    const product = await Product.findByIdAndUpdate(id, data, {
+      new: true,
+      runValidators: true,
+    });
     if (!product) {
       return res.status(404).send("product not found");
     }

@@ -43,6 +43,9 @@ const createOrder = async (req, res) => {
       if (!product) {
         return res.status(404).send("Product not found");
       }
+      if (item.quantity > product.stock) {
+        return res.status(400).send("Not enough stock available");
+      }
 
       const itemTotal = product.price * item.quantity;
 
@@ -63,6 +66,15 @@ const createOrder = async (req, res) => {
       shippingAddress,
     });
 
+    for (const item of cart.items) {
+      const product = await Product.findById(item.product);
+
+      if (!product) {
+        return res.status(404).send("Product not found");
+      }
+      product.stock -= item.quantity;
+      await product.save();
+    }
     // Clear cart after successful order creation
     cart.items = [];
     await cart.save();
