@@ -26,21 +26,38 @@ const createProduct = async (req, res) => {
 
 const getProducts = async (req, res) => {
   try {
-    const { search, category, minPrice, maxPrice } = req.query;
+    const {
+      search,
+      category,
+      minPrice,
+      maxPrice,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
     let filters = {};
 
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+
+    // Search
     if (search) {
       filters.name = {
         $regex: search,
         $options: "i",
       };
     }
+
+    // Category Filter
     if (category) {
       filters.category = {
         $regex: category,
         $options: "i",
       };
     }
+
+    // Price Filter
     if (minPrice || maxPrice) {
       filters.price = {};
 
@@ -52,13 +69,26 @@ const getProducts = async (req, res) => {
         filters.price.$lte = Number(maxPrice);
       }
     }
-    const allProduct = await Product.find(filters);
-    if (allProduct.length === 0) {
-      res.status(200).json([]);
+
+    const products = await Product.find(filters).skip(skip).limit(limitNumber);
+
+    const totalProducts = await Product.countDocuments(filters);
+    const totalPages = Math.ceil(totalProducts / limitNumber);
+
+    if (products.length === 0) {
+      return res.status(200).json([]);
     }
-    res.status(200).json(allProduct);
+
+    return res.status(200).json({
+      products,
+      currentPage: pageNumber,
+      totalPages,
+      totalProducts,
+      hasNextPage: pageNumber < totalPages,
+      hasPreviousPage: pageNumber > 1,
+    });
   } catch (error) {
-    return res.status(500).send("there's a problem when fetching data");
+    return res.status(500).send("There's a problem when fetching data");
   }
 };
 
