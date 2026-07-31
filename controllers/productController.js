@@ -1,26 +1,45 @@
 const Product = require("../models/Product");
+const cloudinary = require("../config/cloudinary");
+const streamifier = require("streamifier");
 
 const createProduct = async (req, res) => {
   try {
-    const { name, description, price, image, category, stock } = req.body;
+    const { name, description, price, category, stock } = req.body;
     const product = await Product.findOne({ name });
     if (product) {
       return res.status(400).send("product already exist");
     }
+    if (!req.file) {
+      return res.status(400).send("Product image is required");
+    }
+    const uploadImage = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: "products",
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        },
+      );
+
+      streamifier.createReadStream(req.file.buffer).pipe(stream);
+    });
     const newProduct = await Product.create({
       name,
       description,
       price,
-      image,
+      image: uploadImage.secure_url,
       category,
       stock,
     });
     res.status(201).json({
-      message: "it was created",
+      message: "Product created successfully",
       newProduct,
     });
   } catch (error) {
-    return res.status(500).send("it wasn't created");
+    console.error(error);
+    return res.status(500).send("Failed to create product");
   }
 };
 
