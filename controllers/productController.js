@@ -140,13 +140,33 @@ const updateProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findByIdAndDelete(id);
+
+    // Find the product first
+    const product = await Product.findById(id);
+
     if (!product) {
-      return res.status(404).send("product not found");
+      return res.status(404).send("Product not found");
     }
-    res.status(200).send("it was deleted sucssefully");
+
+    // Extract Cloudinary public_id
+    const imageUrl = product.image;
+    const parts = imageUrl.split("/");
+    const fileName = parts.pop().split(".")[0];
+    const folder = parts.pop();
+    const publicId = `${folder}/${fileName}`;
+
+    // Delete image from Cloudinary
+    await cloudinary.uploader.destroy(publicId);
+
+    // Delete product from MongoDB
+    await Product.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      message: "Product deleted successfully",
+    });
   } catch (error) {
-    return res.status(500).send("it can't be deleted");
+    console.error(error);
+    return res.status(500).send("Failed to delete product");
   }
 };
 
