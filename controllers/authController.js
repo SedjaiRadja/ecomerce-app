@@ -15,15 +15,20 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   const { email, password } = req.body;
+
   const user = await User.findOne({ email });
+
   if (!user) {
     return res.status(400).send("User not found");
   }
+
   const p = await bcrypt.compare(password, user.password);
+
   if (!p) {
     return res.status(401).send("invalid email or password");
   }
-  const accessToken = await jwt.sign(
+
+  const accessToken = jwt.sign(
     {
       id: user._id,
       role: user.role,
@@ -33,7 +38,8 @@ const login = async (req, res) => {
       expiresIn: "1h",
     },
   );
-  const refreshToken = await jwt.sign(
+
+  const refreshToken = jwt.sign(
     {
       id: user._id,
     },
@@ -42,9 +48,28 @@ const login = async (req, res) => {
       expiresIn: "7d",
     },
   );
+
   user.refreshToken = refreshToken;
   await user.save();
-  res.status(200).json({ accessToken, refreshToken });
+
+  res
+    .cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60,
+    })
+    .cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    })
+    .status(200)
+    .json({
+      message: "Login successful",
+      accessToken: accessToken,
+    });
 };
 
 const refresh = async (req, res) => {

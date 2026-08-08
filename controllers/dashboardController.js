@@ -5,6 +5,7 @@ const User = require("../models/User");
 
 const getDashboardStats = async (req, res) => {
   try {
+    console.log("✅ getDashboardStats called");
     const totalProducts = await Product.countDocuments();
     const totalCategories = await Category.countDocuments();
     const totalOrders = await Order.countDocuments();
